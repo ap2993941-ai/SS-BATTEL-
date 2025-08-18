@@ -1,0 +1,478 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+  <title>Admin • Free Fire Tournaments</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Russo+One&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-primary:   #F8FAFC;
+      --bg-secondary: #E2E8F0;
+      --text-dark:    #1E293B;
+      --accent-blue:  #2563EB;
+      --accent-gold:  #FBBF24;
+      --accent-red:   #DC2626;
+      --border:       #CBD5E1;
+      --radius: 14px;
+    }
+    * { box-sizing: border-box; }
+    html, body { height: 100%; }
+    body {
+      margin: 0; background: var(--bg-primary); color: var(--text-dark);
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, sans-serif;
+    }
+    .brand { font-family: 'Russo One', system-ui; letter-spacing: 0.5px; }
+
+    header.admin {
+      position: sticky; top: 0; z-index: 20;
+      background: rgba(248,250,252,0.8); backdrop-filter: blur(10px);
+      border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 12px 16px;
+    }
+    header .right { display: flex; gap: 8px; align-items: center; }
+    .btn { background: #fff; border: 1px solid var(--border); padding: 10px 12px; border-radius: 10px; font-weight: 600; }
+    .btn.primary { background: var(--accent-blue); border-color: var(--accent-blue); color: #fff; }
+    .btn.danger { background: var(--accent-red); border-color: var(--accent-red); color: #fff; }
+    .input { width: 100%; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--border); background: #fff; }
+
+    main { padding: 12px 12px 78px; max-width: 1100px; margin: 0 auto; }
+    .grid { display: grid; gap: 10px; }
+    .grid.metrics { grid-template-columns: repeat(2, 1fr); }
+    @media (min-width: 900px) { .grid.metrics { grid-template-columns: repeat(4, 1fr);} }
+
+    .card { background: #fff; border: 1px solid var(--border); border-radius: var(--radius); padding: 14px; }
+    .card + .card { margin-top: 10px; }
+    .section-title { font-family: 'Russo One'; font-size: 16px; margin: 6px 0 10px; }
+
+    nav.bottom { position: fixed; bottom: 0; left: 0; right: 0; background: #fff; border-top: 1px solid var(--border); display: grid; grid-template-columns: repeat(5, 1fr); z-index: 30; }
+    nav.bottom button { appearance: none; background: transparent; border: 0; padding: 8px 6px; display: grid; place-items: center; gap: 2px; color: #475569; font-size: 11px; }
+    nav.bottom button.active { color: var(--accent-blue); font-weight: 800; }
+
+    table { width: 100%; border-collapse: collapse; }
+    th, td { font-size: 13px; border-bottom: 1px solid var(--border); padding: 8px; text-align: left; }
+    th { background: var(--bg-secondary); }
+
+    .row { display: flex; gap: 8px; align-items: center; }
+    .hidden { display: none !important; }
+
+    /* Modal */
+    .modal-backdrop { position: fixed; inset: 0; display: none; align-items: center; justify-content: center; background: rgba(15,23,42,0.55); z-index: 40; }
+    .modal { width: 100%; max-width: 620px; background: #fff; border-radius: 14px; border: 1px solid var(--border); padding: 14px; }
+    .modal.open { display: flex; }
+  </style>
+</head>
+<body>
+  <header class="admin">
+    <div class="brand">Admin • Free Fire Tournaments</div>
+    <div class="right">
+      <button class="btn" id="btnViewPayments">View Payments</button>
+      <button class="btn primary" id="btnCreateTourn">Create Tournament</button>
+    </div>
+  </header>
+
+  <main>
+    <!-- Dashboard -->
+    <section id="dash" class="card">
+      <div class="section-title">Dashboard</div>
+      <div class="grid metrics">
+        <div class="card">
+          <div class="label">Total Tournaments</div>
+          <div id="mTournaments" class="brand" style="font-size:22px;">0</div>
+        </div>
+        <div class="card">
+          <div class="label">Total Players</div>
+          <div id="mPlayers" class="brand" style="font-size:22px;">0</div>
+        </div>
+        <div class="card">
+          <div class="label">Online Players</div>
+          <div id="mOnline" class="brand" style="font-size:22px;">0</div>
+        </div>
+        <div class="card">
+          <div class="label">Wallet Balance Held</div>
+          <div id="mWallet" class="brand" style="font-size:22px;">₹0</div>
+        </div>
+      </div>
+      <div class="row" style="margin-top:10px; gap: 6px;">
+        <button class="btn" id="btnSendNotif">Send Notification</button>
+      </div>
+    </section>
+
+    <!-- Tournaments -->
+    <section id="tournaments" class="card hidden">
+      <div class="section-title">Tournaments</div>
+      <div class="row" style="justify-content: space-between;">
+        <input id="searchT" class="input" placeholder="Search by title/map/status" style="max-width: 340px;" />
+        <div class="row">
+          <button class="btn primary" id="btnBulkEnable">Enable Reg</button>
+          <button class="btn danger" id="btnBulkDisable">Disable Reg</button>
+          <button class="btn" id="btnBulkDelete">Delete Past</button>
+        </div>
+      </div>
+      <div style="overflow:auto; margin-top:10px;">
+        <table>
+          <thead>
+            <tr>
+              <th>Title</th>
+              <th>Date/Time</th>
+              <th>Map</th>
+              <th>Prize</th>
+              <th>Entry</th>
+              <th>Players</th>
+              <th>Status</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="tBody"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- Players -->
+    <section id="players" class="card hidden">
+      <div class="section-title">Players</div>
+      <input id="searchP" class="input" placeholder="Search by name / UID / email" style="max-width: 360px;" />
+      <div id="playersList" class="grid" style="grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); margin-top: 12px;"></div>
+    </section>
+
+    <!-- Analytics -->
+    <section id="analytics" class="card hidden">
+      <div class="section-title">Analytics</div>
+      <div class="grid" style="grid-template-columns: 1fr;">
+        <div class="card">
+          <div class="label">Daily Sign-ups</div>
+          <canvas id="chartSignups" height="140"></canvas>
+        </div>
+        <div class="card">
+          <div class="label">Revenue (Entry Fees)</div>
+          <canvas id="chartRevenue" height="140"></canvas>
+        </div>
+        <div class="card">
+          <div class="label">Referrals Redeemed</div>
+          <canvas id="chartReferrals" height="140"></canvas>
+        </div>
+      </div>
+    </section>
+
+    <!-- Settings -->
+    <section id="settings" class="card hidden">
+      <div class="section-title">Settings</div>
+      <div class="grid" style="grid-template-columns: 1fr; gap: 10px;">
+        <div class="card">
+          <div class="brand">Payment Gateway</div>
+          <div class="label">Razorpay Key</div>
+          <input id="razorpayKey" class="input" placeholder="rzp_test_xxx" />
+          <div class="label">Stripe Publishable Key</div>
+          <input id="stripeKey" class="input" placeholder="pk_live_xxx" />
+        </div>
+        <div class="card">
+          <div class="brand">Referral Rules</div>
+          <div class="label">Signup Bonus (₹)</div>
+          <input id="refBonus" class="input" placeholder="10" />
+        </div>
+        <div class="card">
+          <div class="brand">Admins & Roles</div>
+          <div class="row">
+            <input id="newAdminEmail" class="input" placeholder="email@example.com" />
+            <button id="btnAddAdmin" class="btn">Add</button>
+          </div>
+          <div id="adminsList" style="margin-top: 8px;"></div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <nav class="bottom">
+    <button data-nav="dash" class="active">Dashboard</button>
+    <button data-nav="tournaments">Tournaments</button>
+    <button data-nav="players">Players</button>
+    <button data-nav="analytics">Analytics</button>
+    <button data-nav="settings">Settings</button>
+  </nav>
+
+  <!-- Create/Edit Tournament Modal -->
+  <div id="tournModal" class="modal-backdrop" role="dialog" aria-modal="true">
+    <div class="modal">
+      <div class="section-title" id="tournModalTitle">Create Tournament</div>
+      <div class="grid" style="grid-template-columns: 1fr 1fr; gap: 8px;">
+        <div><div class="label">Title</div><input id="fTitle" class="input" /></div>
+        <div><div class="label">Date/Time</div><input id="fDateTime" class="input" type="datetime-local" /></div>
+        <div><div class="label">Map</div><input id="fMap" class="input" placeholder="Bermuda" /></div>
+        <div><div class="label">Prize Pool</div><input id="fPrize" class="input" type="number" /></div>
+        <div><div class="label">Entry Fee</div><input id="fEntry" class="input" type="number" /></div>
+        <div><div class="label">Max Players</div><input id="fMax" class="input" type="number" /></div>
+        <div><div class="label">Room ID</div><input id="fRoomId" class="input" /></div>
+        <div><div class="label">Room Pass</div><input id="fRoomPass" class="input" /></div>
+      </div>
+      <div class="row" style="justify-content: flex-end; margin-top: 10px;">
+        <button class="btn" id="btnTournCancel">Cancel</button>
+        <button class="btn primary" id="btnTournSave">Save</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Payments Modal -->
+  <div id="paymentsModal" class="modal-backdrop" role="dialog" aria-modal="true">
+    <div class="modal">
+      <div class="section-title">Payments</div>
+      <div style="max-height: 60vh; overflow:auto;">
+        <table>
+          <thead><tr><th>ID</th><th>User</th><th>Type</th><th>Amount</th><th>When</th></tr></thead>
+          <tbody id="paymentsBody"></tbody>
+        </table>
+      </div>
+      <div class="row" style="justify-content: flex-end; margin-top: 10px;"><button class="btn" id="btnPaymentsClose">Close</button></div>
+    </div>
+  </div>
+
+  <script>
+    // Storage helpers
+    const storage = {
+      get(key, fallback) { try { const raw = localStorage.getItem(key); return raw ? JSON.parse(raw) : fallback; } catch { return fallback; } },
+      set(key, value) { localStorage.setItem(key, JSON.stringify(value)); }
+    };
+    const currency = n => '₹' + Number(n||0).toFixed(0);
+    function openModal(node) { node.classList.add('open'); }
+    function closeModal(node) { node.classList.remove('open'); }
+    function gid(id) { return document.getElementById(id); }
+
+    // Seed default tournaments if missing (kept in sync with user.html)
+    const seeded = storage.get('tournaments', null);
+    if (!seeded) {
+      const defaults = [
+        { id: 't001', title: 'Daily Clash', matchTime: new Date(Date.now()+60*60*1000).toISOString(), map: 'Bermuda', prize: 1000, entryFee: 30, roomId: '', roomPass: '', maxPlayers: 100, status: 'live', players: 36 },
+        { id: 't002', title: 'Sunset Squad', matchTime: new Date(Date.now()+24*60*60*1000).toISOString(), map: 'Kalahari', prize: 1500, entryFee: 50, roomId: '', roomPass: '', maxPlayers: 120, status: 'upcoming', players: 58 },
+        { id: 't003', title: 'Midnight Bash', matchTime: new Date(Date.now()-48*60*60*1000).toISOString(), map: 'Purgatory', prize: 2000, entryFee: 40, roomId: '', roomPass: '', maxPlayers: 100, status: 'past', players: 100 },
+      ];
+      storage.set('tournaments', defaults);
+    }
+
+    // Navigation
+    const sections = ['dash','tournaments','players','analytics','settings'];
+    function showSection(id) {
+      sections.forEach(s => { const el = gid(s); if (el) { if (s===id) el.classList.remove('hidden'); else el.classList.add('hidden'); }});
+      document.querySelectorAll('nav.bottom button').forEach(b => b.classList.toggle('active', b.getAttribute('data-nav')===id));
+      location.hash = id;
+      if (id==='dash') renderDashboard();
+      if (id==='tournaments') renderTournaments();
+      if (id==='players') renderPlayers();
+      if (id==='analytics') lazyLoadCharts();
+      if (id==='settings') renderSettings();
+    }
+    document.querySelectorAll('nav.bottom button').forEach(b => b.addEventListener('click', () => showSection(b.getAttribute('data-nav'))));
+
+    // Dashboard metrics
+    function renderDashboard() {
+      const t = storage.get('tournaments', []);
+      gid('mTournaments').textContent = t.length;
+      const users = storage.get('users', {});
+      gid('mPlayers').textContent = Object.keys(users).length || 1; // demo user
+      gid('mOnline').textContent = Math.max(1, Math.round((t.find(x=>x.status==='live')?.players||12)/2));
+      const payments = storage.get('payments', []);
+      const held = payments.filter(p=>p.type==='entry').reduce((a,b)=>a+(b.amount||0),0);
+      gid('mWallet').textContent = currency(held);
+    }
+
+    // Tournaments table
+    function renderTournaments() {
+      const body = gid('tBody'); body.innerHTML='';
+      const q = (gid('searchT').value||'').toLowerCase();
+      const all = storage.get('tournaments', []);
+      all.filter(x => !q || `${x.title} ${x.map} ${x.status}`.toLowerCase().includes(q))
+        .forEach(t => {
+          const tr = document.createElement('tr');
+          tr.innerHTML = `
+            <td>${t.title}</td>
+            <td>${new Date(t.matchTime).toLocaleString()}</td>
+            <td>${t.map}</td>
+            <td>${currency(t.prize)}</td>
+            <td>${currency(t.entryFee)}</td>
+            <td>${t.players||0}/${t.maxPlayers}</td>
+            <td>${t.status}</td>
+            <td>
+              <button class='btn' data-edit='${t.id}'>Edit</button>
+              <button class='btn danger' data-delete='${t.id}'>Delete</button>
+            </td>`;
+          body.appendChild(tr);
+        });
+      // Wire buttons
+      body.querySelectorAll('button[data-edit]').forEach(b => b.addEventListener('click', () => openTournModal(b.getAttribute('data-edit'))));
+      body.querySelectorAll('button[data-delete]').forEach(b => b.addEventListener('click', () => deleteTournament(b.getAttribute('data-delete'))));
+    }
+    gid('searchT').addEventListener('input', renderTournaments);
+
+    // Create/Edit modal
+    const tournModal = gid('tournModal');
+    let editingId = null;
+    function openTournModal(id=null) {
+      editingId = id;
+      gid('tournModalTitle').textContent = id ? 'Edit Tournament' : 'Create Tournament';
+      if (id) {
+        const t = storage.get('tournaments', []).find(x => x.id===id);
+        gid('fTitle').value = t.title; gid('fDateTime').value = new Date(t.matchTime).toISOString().slice(0,16);
+        gid('fMap').value = t.map; gid('fPrize').value = t.prize; gid('fEntry').value = t.entryFee; gid('fMax').value = t.maxPlayers;
+        gid('fRoomId').value = t.roomId||''; gid('fRoomPass').value = t.roomPass||'';
+      } else {
+        gid('fTitle').value=''; gid('fDateTime').value=''; gid('fMap').value=''; gid('fPrize').value=''; gid('fEntry').value=''; gid('fMax').value='100'; gid('fRoomId').value=''; gid('fRoomPass').value='';
+      }
+      openModal(tournModal);
+    }
+    gid('btnCreateTourn').addEventListener('click', () => openTournModal());
+    gid('btnTournCancel').addEventListener('click', () => closeModal(tournModal));
+    gid('btnTournSave').addEventListener('click', () => {
+      const t = storage.get('tournaments', []);
+      const payload = {
+        id: editingId || ('t' + Math.random().toString(36).slice(2,10)),
+        title: gid('fTitle').value.trim() || 'Untitled',
+        matchTime: new Date(gid('fDateTime').value || Date.now()).toISOString(),
+        map: gid('fMap').value || 'Bermuda',
+        prize: Number(gid('fPrize').value||0),
+        entryFee: Number(gid('fEntry').value||0),
+        maxPlayers: Number(gid('fMax').value||100),
+        roomId: gid('fRoomId').value||'',
+        roomPass: gid('fRoomPass').value||'',
+        status: (new Date(gid('fDateTime').value).getTime() < Date.now()) ? 'upcoming' : 'upcoming',
+        players: editingId ? (t.find(x=>x.id===editingId)?.players||0) : 0
+      };
+      const idx = t.findIndex(x => x.id === payload.id);
+      if (idx >= 0) t[idx] = { ...t[idx], ...payload }; else t.push(payload);
+      storage.set('tournaments', t);
+      closeModal(tournModal); renderTournaments(); renderDashboard();
+    });
+
+    function deleteTournament(id) {
+      if (!confirm('Delete tournament?')) return;
+      const t = storage.get('tournaments', []).filter(x => x.id !== id);
+      storage.set('tournaments', t);
+      renderTournaments(); renderDashboard();
+    }
+
+    // Bulk actions
+    gid('btnBulkEnable').addEventListener('click', () => bulkSetStatus('upcoming'));
+    gid('btnBulkDisable').addEventListener('click', () => bulkSetStatus('past'));
+    gid('btnBulkDelete').addEventListener('click', () => {
+      const t = storage.get('tournaments', []).filter(x => x.status !== 'past');
+      storage.set('tournaments', t); renderTournaments(); renderDashboard();
+    });
+    function bulkSetStatus(status) {
+      const t = storage.get('tournaments', []).map(x => ({...x, status}));
+      storage.set('tournaments', t); renderTournaments(); renderDashboard();
+    }
+
+    // Players
+    function renderPlayers() {
+      const wrap = gid('playersList'); wrap.innerHTML='';
+      const q = (gid('searchP').value||'').toLowerCase();
+      const users = storage.get('users', {});
+      const list = Object.values(users).length ? Object.values(users) : [JSON.parse(localStorage.getItem('user')||'{}')];
+      list.filter(u => !q || `${u.name} ${u.ffUid} ${u.email||''}`.toLowerCase().includes(q))
+        .forEach(u => {
+          const c = document.createElement('div'); c.className = 'card';
+          const regs = Object.keys(u.registrations||{}).length;
+          c.innerHTML = `
+            <div class='brand' style='font-size:14px;'>${u.name||'Player'} <span style='font-weight:400;color:#64748b'>(${u.id||'u_...'})</span></div>
+            <div class='label'>UID: ${u.ffUid||'-'} • Wallet ${currency(u.walletBalance||0)}</div>
+            <div class='label'>Referrer: ${u.referrer||'-'} • Registrations: ${regs}</div>`;
+          wrap.appendChild(c);
+        });
+    }
+    gid('searchP').addEventListener('input', renderPlayers);
+
+    // Payments modal
+    const paymentsModal = gid('paymentsModal');
+    gid('btnViewPayments').addEventListener('click', () => { renderPayments(); openModal(paymentsModal); });
+    gid('btnPaymentsClose').addEventListener('click', () => closeModal(paymentsModal));
+    function renderPayments() {
+      const body = gid('paymentsBody'); body.innerHTML='';
+      const payments = storage.get('payments', []);
+      const users = storage.get('users', {});
+      payments.slice().reverse().forEach(p => {
+        const tr = document.createElement('tr');
+        const name = users[p.userId]?.name || 'Player';
+        tr.innerHTML = `<td>${p.id}</td><td>${name}</td><td>${p.type}</td><td>${currency(p.amount)}</td><td>${new Date(p.timestamp).toLocaleString()}</td>`;
+        body.appendChild(tr);
+      });
+    }
+
+    // Settings
+    function renderSettings() {
+      const cfg = storage.get('settings', { refBonus: 10, admins: [] });
+      gid('razorpayKey').value = cfg.razorpayKey||''; gid('stripeKey').value = cfg.stripeKey||''; gid('refBonus').value = cfg.refBonus||10;
+      const list = gid('adminsList'); list.innerHTML='';
+      (cfg.admins||[]).forEach((email, idx) => {
+        const row = document.createElement('div'); row.className='row';
+        const span = document.createElement('span'); span.textContent = email; span.style.flex='1';
+        const del = document.createElement('button'); del.className='btn danger'; del.textContent='Remove'; del.addEventListener('click', () => { cfg.admins.splice(idx,1); storage.set('settings', cfg); renderSettings(); });
+        row.appendChild(span); row.appendChild(del); list.appendChild(row);
+      });
+    }
+    gid('razorpayKey').addEventListener('change', e => { const cfg = storage.get('settings', {}); cfg.razorpayKey = e.target.value; storage.set('settings', cfg); });
+    gid('stripeKey').addEventListener('change', e => { const cfg = storage.get('settings', {}); cfg.stripeKey = e.target.value; storage.set('settings', cfg); });
+    gid('refBonus').addEventListener('change', e => { const cfg = storage.get('settings', {}); cfg.refBonus = Number(e.target.value||10); storage.set('settings', cfg); });
+    gid('btnAddAdmin').addEventListener('click', () => { const cfg = storage.get('settings', { admins: [] }); const email = gid('newAdminEmail').value.trim(); if (!email) return; cfg.admins = cfg.admins||[]; if (!cfg.admins.includes(email)) cfg.admins.push(email); gid('newAdminEmail').value=''; storage.set('settings', cfg); renderSettings(); });
+
+    // Analytics (lazy loaded mini charts, canvas only, no heavy libs)
+    let chartsLoaded = false;
+    function lazyLoadCharts() {
+      if (chartsLoaded) return; chartsLoaded = true;
+      const payments = storage.get('payments', []);
+      const byDay = {};
+      payments.forEach(p => {
+        const d = new Date(p.timestamp).toISOString().slice(0,10);
+        byDay[d] = byDay[d] || { signups: 0, revenue: 0, referrals: 0 };
+        if (p.type==='topup') byDay[d].signups += 1; // proxy
+        if (p.type==='entry') byDay[d].revenue += p.amount;
+      });
+      const referrals = storage.get('referrals', []);
+      referrals.forEach(r => { const d = new Date(r.timestamp).toISOString().slice(0,10); byDay[d] = byDay[d]||{signups:0,revenue:0,referrals:0}; byDay[d].referrals += 1; });
+      const labels = Object.keys(byDay).sort();
+      const signups = labels.map(d => byDay[d].signups);
+      const revenue = labels.map(d => byDay[d].revenue);
+      const refs = labels.map(d => byDay[d].referrals);
+      drawMiniChart('chartSignups', labels, signups, '#2563EB');
+      drawMiniChart('chartRevenue', labels, revenue, '#FBBF24');
+      drawMiniChart('chartReferrals', labels, refs, '#10b981');
+    }
+    function drawMiniChart(canvasId, labels, values, color) {
+      const canvas = gid(canvasId); const ctx = canvas.getContext('2d');
+      const w = canvas.width = canvas.clientWidth; const h = canvas.height = canvas.clientHeight;
+      ctx.clearRect(0,0,w,h); ctx.lineWidth = 2; ctx.strokeStyle = color; ctx.fillStyle = color + '33';
+      const max = Math.max(1, ...values);
+      const step = w / Math.max(1, values.length-1);
+      ctx.beginPath();
+      values.forEach((v, i) => { const x = i*step; const y = h - (v/max)*h; if (i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y); });
+      ctx.stroke();
+      // Fill under line
+      ctx.lineTo(w, h); ctx.lineTo(0, h); ctx.closePath(); ctx.fill();
+    }
+
+    // Payments quick-action (mock notification)
+    document.getElementById('btnSendNotif').addEventListener('click', () => alert('Notification sent to active players (demo).'));
+
+    // Payments modal open from header
+    // already wired above
+
+    // Bulk status controls reflect enable/disable registrations semantics
+    // In real app, status might be separate field; kept simple here.
+
+    // Firebase placeholders
+    // firebase.initializeApp(firebaseConfig);
+    // const db = firebase.firestore();
+    // await db.collection('tournaments').doc(tournId).set({ ... }, { merge: true });
+
+    // Initial view
+    const initial = sections.includes(location.hash.replace('#','')) ? location.hash.replace('#','') : 'dash';
+    sections.forEach(s => { if (s!==initial) gid(s).classList.add('hidden'); });
+    document.querySelectorAll('nav.bottom button').forEach(b => b.classList.toggle('active', b.getAttribute('data-nav')===initial));
+    if (initial==='dash') renderDashboard();
+    if (initial==='tournaments') renderTournaments();
+    if (initial==='players') renderPlayers();
+    if (initial==='analytics') lazyLoadCharts();
+    if (initial==='settings') renderSettings();
+  </script>
+</body>
+</html>
+
